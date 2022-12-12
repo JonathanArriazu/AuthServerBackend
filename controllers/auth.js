@@ -3,6 +3,7 @@ const { response } = require('express');
 const Usuario = require('../models/Usuario');
 
 const bcrypt = require('bcryptjs');
+const { generarJWT } = require('../helpers/jwt');
 
 const crearUsuario = async (req, res) => { //Transformamos a funcion asincrona para trabajar con await
 
@@ -41,6 +42,8 @@ const crearUsuario = async (req, res) => { //Transformamos a funcion asincrona p
         dbUser.password = bcrypt.hashSync( password, salt );
 
         //4)Generar el JasonWebToken(JWT)
+        const token = await generarJWT( dbUser.id, dbUser.name )
+
 
         //5)CREAR USUARIO DE BASE DE DATOS
         await dbUser.save(); //Como save e suna funcion que va a la base de datos         
@@ -53,7 +56,8 @@ const crearUsuario = async (req, res) => { //Transformamos a funcion asincrona p
         return res.status(201).json({
             ok: true,
             uid: dbUser.id, //Este id viene ya generado desde Mongo
-            name
+            name,
+            token
         });
         
     } catch (error) {

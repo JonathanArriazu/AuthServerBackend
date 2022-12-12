@@ -74,7 +74,7 @@ const crearUsuario = async (req, res) => { //Transformamos a funcion asincrona p
     }) */
 }
 
-const loginUsuario = (req, res = response) => {
+const loginUsuario = async(req, res = response) => {
 
     /* const errors = validationResult( req );
     if( !errors.isEmpty() ) {
@@ -85,12 +85,49 @@ const loginUsuario = (req, res = response) => {
     } */
 
     const { email, password } = req.body;
-    console.log(email, password);
+    
+    try {
 
-    return res.json({
-        ok: true,
-        msg: 'Login de usuario /new'
-    })
+        const dbUser= await Usuario.findOne({ email: email });
+        if ( !dbUser ) { //Si no tenemos un dbUser, significa que el email es incorrecto
+            return res.status(400).json({
+                ok: false,
+                msg: 'El correo no existe'
+            })
+        }
+
+        //Si llega este punto significa que tenemos un usuario con email existente pero
+        //aun no verificamos la contraseña, entonces ahora CONFIRMAMOS SI EL PASSWORD HACE MATCH
+
+        //CompareSync sirve para saber si al encriptar una contraseña haria match con otra que ya tenemos encriptada
+        const validPassword = bcrypt.compareSync( password, dbUser.password ) //true si son validos o false si no
+
+        if( !validPassword ) {
+            return res.status(400).json({
+                ok: false,
+                msg: 'El password no es valido'
+            })
+        }
+
+        //En este punto el email es valido y la contraseña tambien entonces generamos el JWT
+        const token = await generarJWT( dbUser.id, dbUser.name )
+
+        //Hacemos el retorno o respuesta del servicio
+        return res.json({
+            ok: true,
+            uid: dbUser.id,
+            name: dbUser.name,
+            token
+        })
+
+
+    } catch (error) {
+        console.log(error);
+        return res.status(500).json({
+            ok: false,
+            msg: 'Hable con el administrador'
+        })
+    }
 }
 
 const revalidarToken = (req, res = response) => {
